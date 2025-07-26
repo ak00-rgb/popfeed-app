@@ -105,7 +105,11 @@ function UsernamePageContent() {
       localStorage.removeItem('otp-email');
       localStorage.removeItem('auth-flow-in-progress');
       
-      window.location.href = redirect;
+      // Set a flag to indicate user is coming from username page
+      sessionStorage.setItem('from-username-page', 'true');
+      
+      // Use router.push instead of window.location.href to prevent create page interference
+      router.push(redirect);
     } catch {
       setError('An error occurred');
     } finally {

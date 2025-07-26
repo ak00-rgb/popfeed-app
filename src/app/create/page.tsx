@@ -39,6 +39,14 @@ function CreatePageContent() {
         return;
       }
       
+      // Check if user is coming from username page by looking at sessionStorage
+      const fromUsernamePage = sessionStorage.getItem('from-username-page');
+      if (fromUsernamePage) {
+        console.log('Create page - user coming from username page, skipping redirect')
+        sessionStorage.removeItem('from-username-page');
+        return;
+      }
+      
       setCheckingProfile(true);
       // For authenticated users, check their profile status
       const checkProfileAndRedirect = async () => {
