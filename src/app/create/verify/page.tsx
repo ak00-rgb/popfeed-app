@@ -18,15 +18,20 @@ function VerifyPageContent() {
   useEffect(() => {
     const emailParam = searchParams.get('email')
     const tokenParam = searchParams.get('token')
+    const redirectParam = searchParams.get('redirect')
     
     if (emailParam) setEmail(emailParam)
     if (tokenParam) setToken(tokenParam)
+    
+    // Debug: Log the redirect URL
+    console.log('Verify page - redirect URL:', redirectParam)
   }, [searchParams])
 
   // Wait for session to be established after verification
   useEffect(() => {
     if (verificationComplete && !sessionLoading && session) {
       const redirect = searchParams.get('redirect') || '/feed'
+      console.log('Verify page - redirecting to username setup with redirect:', redirect)
       // Force a page reload to ensure session is properly established
       window.location.href = `/create/username?redirect=${encodeURIComponent(redirect)}`
     }
@@ -63,6 +68,7 @@ function VerifyPageContent() {
         // Wait a bit more for session to be established
         setTimeout(() => {
           const redirect = searchParams.get('redirect') || '/feed'
+          console.log('Verify page - final redirect after timeout:', redirect)
           window.location.href = `/create/username?redirect=${encodeURIComponent(redirect)}`
         }, 2000)
       } else {

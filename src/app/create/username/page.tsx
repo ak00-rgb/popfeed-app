@@ -33,6 +33,7 @@ function UsernamePageContent() {
 
         if (profile && profile.alias_finalized && !profile.username.startsWith('user_')) {
           // User already has a proper username, redirect to intended destination
+          // Use window.location to ensure proper redirect
           window.location.href = redirect;
           return;
         }
@@ -90,6 +91,7 @@ function UsernamePageContent() {
       
       // Redirect after successful username setup
       // Use window.location to force a full page reload and ensure session is properly established
+      console.log('Redirecting to:', redirect);
       window.location.href = redirect;
     } catch {
       setError('An error occurred');
