@@ -63,7 +63,7 @@ function UsernamePageContent() {
       
       // Redirect after successful username setup
       router.push(redirect);
-    } catch (err) {
+    } catch {
       setError('An error occurred');
     } finally {
       setLoading(false);
