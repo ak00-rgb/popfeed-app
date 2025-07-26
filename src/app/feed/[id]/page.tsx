@@ -39,7 +39,6 @@ function FeedPageContent() {
   const { session, user, loading, signOut } = useSession()
   const hasInitialized = useRef<string | null>(null)
   const hasLoadedUsername = useRef(false)
-  const fetchedIds = useRef<Set<string>>(new Set())
 
   const [posts, setPosts] = useState<Post[]>([])
   const [showComposer, setShowComposer] = useState(false)
@@ -49,6 +48,7 @@ function FeedPageContent() {
   const [commentInputs, setCommentInputs] = useState<{ [postId: string]: string }>({})
   const [submittingComments, setSubmittingComments] = useState<Set<string>>(new Set())
   const [profileLoading, setProfileLoading] = useState(true);
+  const [postsFetched, setPostsFetched] = useState(false);
 
   const loadUsername = useCallback(async (userId: string) => {
     try {
@@ -118,7 +118,15 @@ function FeedPageContent() {
   }, [searchParams, session, username, router, id])
 
   const fetchPosts = useCallback(async () => {
-    console.log('FeedPage: fetchPosts called', { id })
+    console.log('FeedPage: fetchPosts called', { id, postsFetched })
+    
+    // Prevent multiple fetches
+    if (postsFetched) {
+      console.log('FeedPage: posts already fetched, skipping')
+      return;
+    }
+    
+    setPostsFetched(true);
     
     try {
       const response = await fetch(`/api/feed-with-likes-comments?feedId=${id}`);
@@ -148,21 +156,20 @@ function FeedPageContent() {
       console.log('FeedPage: postsWithLikesAndComments:', formattedPosts);
     } catch (error) {
       console.error('Error fetching batched feed:', error);
-    } finally {
-      // setPostsLoading(false); // This line was removed as per the edit hint
+      // Reset the flag on error so we can retry
+      setPostsFetched(false);
     }
-  }, [id])
+  }, [id, postsFetched])
 
   useEffect(() => {
-    console.log('FeedPage: fetchPosts useEffect triggered', { id, hasInitialized: hasInitialized.current, fetchedIds: Array.from(fetchedIds.current) })
+    console.log('FeedPage: fetchPosts useEffect triggered', { id, postsFetched })
     
-    // Only fetch if we haven't fetched this ID before
-    if (id && !fetchedIds.current.has(id as string)) {
-      fetchedIds.current.add(id as string);
+    // Only fetch if we haven't fetched posts yet
+    if (id && !postsFetched) {
       fetchPosts();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [id, postsFetched])
 
   const toggleLike = async (postId: string) => {
     // Check if user is authenticated
