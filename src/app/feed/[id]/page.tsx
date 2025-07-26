@@ -40,6 +40,7 @@ function FeedPageContent() {
   const supabase = createClientComponentClient()
   const { session, user, loading, signOut } = useSession()
   const hasInitialized = useRef<string | null>(null)
+  const hasLoadedUsername = useRef(false)
 
   const [posts, setPosts] = useState<Post[]>([])
   const [showComposer, setShowComposer] = useState(false)
@@ -49,7 +50,6 @@ function FeedPageContent() {
   const [commentInputs, setCommentInputs] = useState<{ [postId: string]: string }>({})
   const [submittingComments, setSubmittingComments] = useState<Set<string>>(new Set())
   const [profileLoading, setProfileLoading] = useState(true);
-  const [postsLoading, setPostsLoading] = useState(false);
 
   const loadUsername = useCallback(async (userId: string) => {
     try {
@@ -80,14 +80,18 @@ function FeedPageContent() {
 
   // Load username when user is available
   useEffect(() => {
-    console.log('FeedPage: loadUsername useEffect triggered', { userId: user?.id, profileLoading })
-    if (user?.id) {
+    console.log('FeedPage: loadUsername useEffect triggered', { userId: user?.id, hasLoadedUsername: hasLoadedUsername.current })
+    
+    // Only load username once per user
+    if (user?.id && !hasLoadedUsername.current) {
+      hasLoadedUsername.current = true;
       setProfileLoading(true);
       loadUsername(user.id).finally(() => setProfileLoading(false));
-    } else {
+    } else if (!user?.id) {
+      hasLoadedUsername.current = false;
       setProfileLoading(false);
     }
-  }, [user?.id, loadUsername]); // Add loadUsername to dependencies
+  }, [user?.id, loadUsername]); // Remove profileLoading from dependencies
 
   useEffect(() => {
     console.log('FeedPage: post composer useEffect triggered', { 
@@ -112,8 +116,6 @@ function FeedPageContent() {
 
   const fetchPosts = useCallback(async () => {
     console.log('FeedPage: fetchPosts called', { id })
-    
-    setPostsLoading(true);
     
     try {
       const response = await fetch(`/api/feed-with-likes-comments?feedId=${id}`);
@@ -144,7 +146,7 @@ function FeedPageContent() {
     } catch (error) {
       console.error('Error fetching batched feed:', error);
     } finally {
-      setPostsLoading(false);
+      // setPostsLoading(false); // This line was removed as per the edit hint
     }
   }, [id])
 
