@@ -17,6 +17,26 @@ function CreatePageContent() {
   // If user is already authenticated, redirect them appropriately
   useEffect(() => {
     if (!sessionLoading && session) {
+      // Debug: Log the redirect attempt
+      console.log('Create page - user authenticated, checking profile. Redirect:', redirect)
+      
+      // Check if user is coming from the verify page (in the middle of auth flow)
+      const referrer = document.referrer;
+      const isFromVerifyPage = referrer.includes('/create/verify');
+      const isFromUsernamePage = referrer.includes('/create/username');
+      
+      if (isFromVerifyPage || isFromUsernamePage) {
+        console.log('Create page - user coming from auth flow, skipping redirect to avoid conflicts')
+        return;
+      }
+      
+      // Check if we're in the middle of the auth flow by looking at localStorage
+      const otpEmail = localStorage.getItem('otp-email');
+      if (otpEmail) {
+        console.log('Create page - user has OTP email in localStorage, likely in auth flow, skipping redirect')
+        return;
+      }
+      
       setCheckingProfile(true);
       // For authenticated users, check their profile status
       const checkProfileAndRedirect = async () => {
@@ -32,17 +52,20 @@ function CreatePageContent() {
 
           if (!profile) {
             // No profile exists, go to username setup
+            console.log('Create page - no profile, redirecting to username setup with:', redirect)
             router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`);
             return;
           }
 
           if (!profile.alias_finalized || profile.username.startsWith('user_')) {
             // User needs to complete username setup
+            console.log('Create page - user needs username setup, redirecting with:', redirect)
             router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`);
             return;
           }
 
           // User has completed setup, redirect to intended destination
+          console.log('Create page - user has username, redirecting to:', redirect)
           if (redirect === '/create/details') {
             router.push('/create/details');
           } else {
@@ -51,6 +74,7 @@ function CreatePageContent() {
         } catch (error) {
           console.error('Error checking profile:', error);
           // Fallback to username setup
+          console.log('Create page - error, fallback redirect to username setup with:', redirect)
           router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`);
         } finally {
           setCheckingProfile(false);
