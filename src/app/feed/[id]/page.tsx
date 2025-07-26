@@ -158,7 +158,7 @@ function FeedPageContent() {
       hasInitialized.current = id as string;
       fetchPosts();
     }
-  }, [id, fetchPosts])
+  }, [id]) // Remove fetchPosts from dependencies to prevent infinite loop
 
   const toggleLike = async (postId: string) => {
     // Check if user is authenticated
