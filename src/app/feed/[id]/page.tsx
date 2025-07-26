@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { FaHeart, FaRegHeart, FaComment, FaShare } from 'react-icons/fa'
 import { IoMdCreate } from 'react-icons/io'
@@ -49,7 +49,7 @@ export default function FeedPage() {
   const [submittingComments, setSubmittingComments] = useState<Set<string>>(new Set())
   const [profileLoading, setProfileLoading] = useState(true);
 
-  const loadUsername = async (userId: string) => {
+  const loadUsername = useCallback(async (userId: string) => {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -74,7 +74,7 @@ export default function FeedPage() {
     } catch (error) {
       console.error('Error in loadUsername:', error)
     }
-  }
+  }, [supabase])
 
   // Load username when user is available
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function FeedPage() {
     }
   }, [searchParams, session, username, router, id])
 
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       const response = await fetch(`/api/feed-with-likes-comments?feedId=${id}`);
       if (!response.ok) {
@@ -131,11 +131,11 @@ export default function FeedPage() {
     } catch (error) {
       console.error('Error fetching batched feed:', error);
     }
-  }
+  }, [id])
 
   useEffect(() => {
     fetchPosts()
-  }, [id, fetchPosts]) // Add fetchPosts to dependencies
+  }, [fetchPosts]) // Add fetchPosts to dependencies
 
   const toggleLike = async (postId: string) => {
     // Check if user is authenticated

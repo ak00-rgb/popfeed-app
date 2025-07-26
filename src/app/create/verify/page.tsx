@@ -2,17 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-
-function generateTempAlias(userId: string) {
-  const suffix = userId?.slice(0, 6) || Math.random().toString(36).substring(2, 8);
-  return `user_${suffix}`;
-}
 
 export default function VerifyPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const supabase = createClientComponentClient();
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,7 +50,7 @@ export default function VerifyPage() {
       } else {
         setError(data.error || 'Verification failed');
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -90,7 +83,7 @@ export default function VerifyPage() {
       } else {
         setError(data.error || 'Failed to send OTP');
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
