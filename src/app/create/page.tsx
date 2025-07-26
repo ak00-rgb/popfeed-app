@@ -32,8 +32,10 @@ function CreatePageContent() {
       
       // Check if we're in the middle of the auth flow by looking at localStorage
       const otpEmail = localStorage.getItem('otp-email');
-      if (otpEmail) {
-        console.log('Create page - user has OTP email in localStorage, likely in auth flow, skipping redirect')
+      const authFlowInProgress = localStorage.getItem('auth-flow-in-progress');
+      
+      if (otpEmail || authFlowInProgress) {
+        console.log('Create page - user has OTP email or auth flow in progress, likely in auth flow, skipping redirect')
         return;
       }
       

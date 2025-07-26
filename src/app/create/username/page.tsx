@@ -100,7 +100,11 @@ function UsernamePageContent() {
       
       // Redirect after successful username setup
       console.log('Username page - username saved, redirecting to:', redirect);
-      // Use window.location to force a full page reload and ensure session is properly established
+      
+      // Clear auth flow flags
+      localStorage.removeItem('otp-email');
+      localStorage.removeItem('auth-flow-in-progress');
+      
       window.location.href = redirect;
     } catch {
       setError('An error occurred');

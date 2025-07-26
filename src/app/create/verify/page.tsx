@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from '@/src/components/SessionProvider'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 function VerifyPageContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const { session, loading: sessionLoading } = useSession()
   const [email, setEmail] = useState('')
@@ -35,12 +36,15 @@ function VerifyPageContent() {
       console.log('Verify page - redirect URL type:', typeof redirect)
       console.log('Verify page - redirect URL length:', redirect.length)
       
-      // Force a page reload to ensure session is properly established
+      // Set a flag to prevent create page interference
+      localStorage.setItem('auth-flow-in-progress', 'true')
+      
+      // Use router.push instead of window.location.href
       const usernameUrl = `/create/username?redirect=${redirect}`
       console.log('Verify page - final URL to redirect to:', usernameUrl)
-      window.location.href = usernameUrl
+      router.push(usernameUrl)
     }
-  }, [verificationComplete, sessionLoading, session, searchParams])
+  }, [verificationComplete, sessionLoading, session, searchParams, router])
 
   const handleVerify = async () => {
     if (!email || !token) {
