@@ -135,7 +135,7 @@ function FeedPageContent() {
 
   useEffect(() => {
     fetchPosts()
-  }, [fetchPosts]) // Add fetchPosts to dependencies
+  }, [id]) // Change dependency to id instead of fetchPosts to prevent infinite loop
 
   const toggleLike = async (postId: string) => {
     // Check if user is authenticated
