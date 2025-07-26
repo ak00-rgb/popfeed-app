@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useEffect, useState, useCallback, Suspense, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { FaHeart, FaRegHeart, FaComment, FaShare } from 'react-icons/fa'
 import { IoMdCreate } from 'react-icons/io'
@@ -39,6 +39,7 @@ function FeedPageContent() {
   const searchParams = useSearchParams()
   const supabase = createClientComponentClient()
   const { session, user, loading, signOut } = useSession()
+  const hasInitialized = useRef<string | null>(null)
 
   const [posts, setPosts] = useState<Post[]>([])
   const [showComposer, setShowComposer] = useState(false)
@@ -48,6 +49,7 @@ function FeedPageContent() {
   const [commentInputs, setCommentInputs] = useState<{ [postId: string]: string }>({})
   const [submittingComments, setSubmittingComments] = useState<Set<string>>(new Set())
   const [profileLoading, setProfileLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(false);
 
   const loadUsername = useCallback(async (userId: string) => {
     try {
@@ -78,6 +80,7 @@ function FeedPageContent() {
 
   // Load username when user is available
   useEffect(() => {
+    console.log('FeedPage: loadUsername useEffect triggered', { userId: user?.id, profileLoading })
     if (user?.id) {
       setProfileLoading(true);
       loadUsername(user.id).finally(() => setProfileLoading(false));
@@ -87,6 +90,12 @@ function FeedPageContent() {
   }, [user?.id, loadUsername]); // Add loadUsername to dependencies
 
   useEffect(() => {
+    console.log('FeedPage: post composer useEffect triggered', { 
+      postParam: searchParams.get('post'), 
+      session: !!session, 
+      username, 
+      id 
+    })
     if (searchParams.get('post') === 'true') {
       // Only show composer if user is properly authenticated and has a username
       if (session && username && !username.startsWith('user_')) {
@@ -102,6 +111,10 @@ function FeedPageContent() {
   }, [searchParams, session, username, router, id])
 
   const fetchPosts = useCallback(async () => {
+    console.log('FeedPage: fetchPosts called', { id })
+    
+    setPostsLoading(true);
+    
     try {
       const response = await fetch(`/api/feed-with-likes-comments?feedId=${id}`);
       if (!response.ok) {
@@ -130,12 +143,20 @@ function FeedPageContent() {
       console.log('FeedPage: postsWithLikesAndComments:', formattedPosts);
     } catch (error) {
       console.error('Error fetching batched feed:', error);
+    } finally {
+      setPostsLoading(false);
     }
   }, [id])
 
   useEffect(() => {
-    fetchPosts()
-  }, [id]) // Change dependency to id instead of fetchPosts to prevent infinite loop
+    console.log('FeedPage: fetchPosts useEffect triggered', { id, hasInitialized: hasInitialized.current })
+    
+    // Only fetch on initial load or when id changes
+    if (!hasInitialized.current || hasInitialized.current !== id) {
+      hasInitialized.current = id as string;
+      fetchPosts();
+    }
+  }, [id, fetchPosts])
 
   const toggleLike = async (postId: string) => {
     // Check if user is authenticated
