@@ -37,7 +37,6 @@ function FeedPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { session, user, loading, signOut } = useSession()
-  const hasInitialized = useRef<string | null>(null)
   const hasLoadedUsername = useRef(false)
 
   const [posts, setPosts] = useState<Post[]>([])
