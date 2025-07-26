@@ -42,11 +42,11 @@ function VerifyPageContent() {
 
       if (response.ok) {
         setSuccess(true)
-        // Redirect to username setup after a short delay
+        // Redirect to username setup after a short delay to allow session to be established
         setTimeout(() => {
-          const redirect = searchParams.get('redirect') || '/'
+          const redirect = searchParams.get('redirect') || '/feed'
           router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`)
-        }, 2000)
+        }, 1500)
       } else {
         setError(data.error || 'Verification failed')
       }

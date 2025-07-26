@@ -62,7 +62,8 @@ function UsernamePageContent() {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Redirect after successful username setup
-      router.push(redirect);
+      // Use window.location to force a full page reload and ensure session is properly established
+      window.location.href = redirect;
     } catch {
       setError('An error occurred');
     } finally {

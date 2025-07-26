@@ -16,39 +16,44 @@ function CreatePageContent() {
   // If user is already authenticated, redirect them appropriately
   useEffect(() => {
     if (!sessionLoading && session) {
-      // For authenticated users, redirect based on the redirect parameter
-      if (redirect === '/create/details') {
-        // User wants to create a feed, check if they have username
-        const checkProfile = async () => {
-          try {
-            const { createClientComponentClient } = await import('@supabase/auth-helpers-nextjs');
-            const supabase = createClientComponentClient();
-            
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('username, alias_finalized')
-              .eq('id', session.user.id)
-              .single();
+      // For authenticated users, check their profile status
+      const checkProfileAndRedirect = async () => {
+        try {
+          const { createClientComponentClient } = await import('@supabase/auth-helpers-nextjs');
+          const supabase = createClientComponentClient();
+          
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, alias_finalized')
+            .eq('id', session.user.id)
+            .single();
 
-            if (profile?.username && profile?.alias_finalized && !profile.username.startsWith('user_')) {
-              // User has finalized username, go to create details
-              router.push('/create/details');
-            } else {
-              // User needs username setup first
-              router.push('/create/username?redirect=/create/details');
-            }
-          } catch (error) {
-            console.error('Error checking profile:', error);
-            // Fallback to username setup
-            router.push('/create/username?redirect=/create/details');
+          if (!profile) {
+            // No profile exists, go to username setup
+            router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`);
+            return;
           }
-        };
 
-        checkProfile();
-      } else {
-        // Default redirect to feed
-        router.push(redirect);
-      }
+          if (!profile.alias_finalized || profile.username.startsWith('user_')) {
+            // User needs to complete username setup
+            router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`);
+            return;
+          }
+
+          // User has completed setup, redirect to intended destination
+          if (redirect === '/create/details') {
+            router.push('/create/details');
+          } else {
+            router.push(redirect);
+          }
+        } catch (error) {
+          console.error('Error checking profile:', error);
+          // Fallback to username setup
+          router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`);
+        }
+      };
+
+      checkProfileAndRedirect();
     }
   }, [session, sessionLoading, redirect, router])
 
@@ -83,6 +88,16 @@ function CreatePageContent() {
       <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
         <p className="text-gray-400 text-sm">Loading...</p>
+      </div>
+    );
+  }
+
+  // If user is authenticated, show loading while redirecting
+  if (session) {
+    return (
+      <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-400 text-sm">Redirecting...</p>
       </div>
     );
   }
