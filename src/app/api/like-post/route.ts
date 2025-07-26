@@ -3,8 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
-  const cookieStore = await cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = createRouteHandlerClient({ cookies });
   const { postId, action } = await req.json();
 
   if (!postId || !action) {
@@ -82,8 +81,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const cookieStore = await cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = createRouteHandlerClient({ cookies });
   const { searchParams } = new URL(req.url);
   const postId = searchParams.get('postId');
 
