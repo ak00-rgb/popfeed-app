@@ -7,7 +7,9 @@ import { useSession } from '@/src/components/SessionProvider';
 
 function UsernamePageContent() {
   const router = useRouter();
-  const redirect = useSearchParams().get('redirect') || '/feed';
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
+  const redirect = redirectParam || '/feed';
   const supabase = createClientComponentClient();
   const { user } = useSession();
 
@@ -16,6 +18,12 @@ function UsernamePageContent() {
   const [error, setError] = useState('');
   const [checkingProfile, setCheckingProfile] = useState(true);
   const [needsUsername, setNeedsUsername] = useState(false);
+
+  // Debug: Log the redirect URL when component loads
+  useEffect(() => {
+    console.log('Username page - received redirect param:', redirectParam);
+    console.log('Username page - final redirect URL:', redirect);
+  }, [redirectParam, redirect]);
 
   useEffect(() => {
     const checkProfileStatus = async () => {
@@ -33,6 +41,7 @@ function UsernamePageContent() {
 
         if (profile && profile.alias_finalized && !profile.username.startsWith('user_')) {
           // User already has a proper username, redirect to intended destination
+          console.log('Username page - user already has username, redirecting to:', redirect);
           // Use window.location to ensure proper redirect
           window.location.href = redirect;
           return;
@@ -90,8 +99,8 @@ function UsernamePageContent() {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Redirect after successful username setup
+      console.log('Username page - username saved, redirecting to:', redirect);
       // Use window.location to force a full page reload and ensure session is properly established
-      console.log('Redirecting to:', redirect);
       window.location.href = redirect;
     } catch {
       setError('An error occurred');

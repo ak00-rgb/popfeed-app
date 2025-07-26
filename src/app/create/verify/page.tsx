@@ -32,8 +32,13 @@ function VerifyPageContent() {
     if (verificationComplete && !sessionLoading && session) {
       const redirect = searchParams.get('redirect') || '/feed'
       console.log('Verify page - redirecting to username setup with redirect:', redirect)
+      console.log('Verify page - redirect URL type:', typeof redirect)
+      console.log('Verify page - redirect URL length:', redirect.length)
+      
       // Force a page reload to ensure session is properly established
-      window.location.href = `/create/username?redirect=${encodeURIComponent(redirect)}`
+      const usernameUrl = `/create/username?redirect=${redirect}`
+      console.log('Verify page - final URL to redirect to:', usernameUrl)
+      window.location.href = usernameUrl
     }
   }, [verificationComplete, sessionLoading, session, searchParams])
 
