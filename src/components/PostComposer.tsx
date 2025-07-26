@@ -28,9 +28,9 @@ interface Post {
 
 interface PostComposerProps {
   feedId: string;
-  onPostCreated: (newPost: Post) => void;
+  onPostCreated: (post: Post) => void;
   onCancel: () => void;
-  currentUsername: string; // trusted source of immutable alias
+  currentUsername: string;
 }
 
 export default function PostComposer({
@@ -43,11 +43,10 @@ export default function PostComposer({
   const { user } = useSession();
 
   const [text, setText] = useState('');
-  const [alias, setAlias] = useState(currentUsername || '');
   const [loading, setLoading] = useState(false);
 
   const handlePost = async () => {
-    if (!text.trim() || !user?.id || !alias.trim() || alias === 'anonymous') {
+    if (!text.trim() || !user?.id || !currentUsername.trim() || currentUsername === 'anonymous') {
       alert('Please set a valid username before posting');
       return;
     }
@@ -70,7 +69,7 @@ export default function PostComposer({
     .insert({
       feed_id: feed.id,
       message: text,
-      alias,
+      alias: currentUsername,
     });
   
   setLoading(false);
@@ -79,7 +78,7 @@ export default function PostComposer({
   if (!error) {
     onPostCreated({
       id: crypto.randomUUID(), // or just a placeholder string like 'temp'
-      username: alias,
+      username: currentUsername,
       created_at: 'Just now',
       body: text,
       likes: 0,
@@ -96,36 +95,35 @@ export default function PostComposer({
   };
 
   return (
-    <div className="bg-[#1a1a2e] p-4 rounded-xl mb-4 text-white shadow-md">
-      <div className="flex justify-between items-center mb-2">
-        <div className="text-lg font-semibold">
-          @{currentUsername || 'anonymous'}
+    <div className="bg-[#1e1b30] rounded-xl p-4 mb-6">
+      <div className="flex items-start gap-3">
+        <div className="flex-1">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="What's happening?"
+            className="w-full bg-transparent text-white placeholder-gray-400 resize-none outline-none border-none"
+            rows={3}
+            disabled={loading}
+          />
         </div>
         <div className="flex gap-2">
           <button
             onClick={onCancel}
-            className="text-sm text-gray-400 hover:text-gray-200 px-3 py-1.5 rounded"
+            disabled={loading}
+            className="px-4 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handlePost}
-            disabled={!text.trim() || loading}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-1.5 rounded-full disabled:opacity-50"
+            disabled={loading || !text.trim()}
+            className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
           >
             {loading ? 'Posting...' : 'Post'}
           </button>
         </div>
       </div>
-      <p className="text-sm text-gray-400 mb-2">Post to Anyone</p>
-      <textarea
-        autoFocus
-        rows={3}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        className="w-full bg-[#13132b] p-3 rounded-lg resize-none text-white placeholder-gray-500 focus:outline-none"
-        placeholder="What do you want to talk about?"
-      />
     </div>
   );
 }

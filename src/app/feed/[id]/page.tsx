@@ -49,16 +49,6 @@ export default function FeedPage() {
   const [submittingComments, setSubmittingComments] = useState<Set<string>>(new Set())
   const [profileLoading, setProfileLoading] = useState(true);
 
-  // Load username when user is available
-  useEffect(() => {
-    if (user?.id) {
-      setProfileLoading(true);
-      loadUsername(user.id).finally(() => setProfileLoading(false));
-    } else {
-      setProfileLoading(false);
-    }
-  }, [user?.id]); // Only depend on user id!
-
   const loadUsername = async (userId: string) => {
     try {
       const { data: profile, error } = await supabase
@@ -86,6 +76,16 @@ export default function FeedPage() {
     }
   }
 
+  // Load username when user is available
+  useEffect(() => {
+    if (user?.id) {
+      setProfileLoading(true);
+      loadUsername(user.id).finally(() => setProfileLoading(false));
+    } else {
+      setProfileLoading(false);
+    }
+  }, [user?.id, loadUsername]); // Add loadUsername to dependencies
+
   useEffect(() => {
     if (searchParams.get('post') === 'true') {
       // Only show composer if user is properly authenticated and has a username
@@ -110,7 +110,17 @@ export default function FeedPage() {
       }
       const { posts } = await response.json();
       // Format created_at for display
-      const formattedPosts = posts.map((post: any) => ({
+      const formattedPosts = posts.map((post: {
+        id: string;
+        username: string;
+        created_at: string;
+        body: string;
+        likes: number;
+        isLiked: boolean;
+        comments: number;
+        commentList: Comment[];
+        shares: number;
+      }) => ({
         ...post,
         created_at: new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         showComments: false,
@@ -125,7 +135,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     fetchPosts()
-  }, [id])
+  }, [id, fetchPosts]) // Add fetchPosts to dependencies
 
   const toggleLike = async (postId: string) => {
     // Check if user is authenticated
@@ -338,7 +348,8 @@ export default function FeedPage() {
   }
 
   // Refetch posts after a new post is created to avoid race condition
-  const handlePostCreated = async (newPost: Post) => {
+  const handlePostCreated = async () => {
+    // Refetch posts after new post creation
     await fetchPosts();
     setShowComposer(false);
   }

@@ -2,6 +2,30 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
+interface CommentLike {
+  comment_id: string;
+  user_id: string;
+}
+
+interface PostWithExtras {
+  id: string;
+  username: string;
+  created_at: string;
+  body: string;
+  likes: number;
+  isLiked: boolean;
+  comments: number;
+  commentList: Array<{
+    id: string;
+    username: string;
+    content: string;
+    created_at: string;
+    likes: number;
+    isLiked: boolean;
+  }>;
+  shares: number;
+}
+
 export async function GET(req: Request) {
   const cookieStore = await cookies(); // FIX: Await cookies()
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
@@ -62,7 +86,7 @@ export async function GET(req: Request) {
 
   // Step 5: Fetch all comment likes for these comments
   const commentIds = comments.map((c) => c.id);
-  let commentLikes: any[] = [];
+  let commentLikes: CommentLike[] = [];
   if (commentIds.length > 0) {
     const { data: cl, error: clError } = await supabase
       .from('comment_likes')
@@ -74,7 +98,7 @@ export async function GET(req: Request) {
   }
 
   // Step 6: Aggregate data
-  const postsWithExtras = posts.map((post) => {
+  const postsWithExtras: PostWithExtras[] = posts.map((post) => {
     // Likes
     const likesForPost = postLikes.filter((l) => l.post_id === post.id);
     const likes = likesForPost.length;

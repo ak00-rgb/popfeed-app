@@ -2,165 +2,165 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 function generateTempAlias(userId: string) {
   const suffix = userId?.slice(0, 6) || Math.random().toString(36).substring(2, 8);
   return `user_${suffix}`;
 }
 
-export default function VerifyOTP() {
+export default function VerifyPage() {
   const searchParams = useSearchParams();
-  const email = searchParams.get('email') || '';
-  const redirect = searchParams.get('redirect') || '/feed';
-  const [code, setCode] = useState(Array(6).fill(''));
-  const [resendTimer, setResendTimer] = useState(30);
   const router = useRouter();
+  const supabase = createClientComponentClient();
+  const [email, setEmail] = useState('');
+  const [token, setToken] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setResendTimer((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleChange = (value: string, index: number) => {
-    if (/^\d$/.test(value) || value === '') {
-      const updated = [...code];
-      updated[index] = value;
-      setCode(updated);
-      if (value !== '' && index < 5) {
-        const next = document.getElementById(`otp-${index + 1}`);
-        if (next) (next as HTMLInputElement).focus();
-      }
-    }
-  };
+    const emailParam = searchParams.get('email');
+    const tokenParam = searchParams.get('token');
+    
+    if (emailParam) setEmail(emailParam);
+    if (tokenParam) setToken(tokenParam);
+  }, [searchParams]);
 
   const handleVerify = async () => {
-    const otp = code.join('');
+    if (!email || !token) {
+      setError('Email and token are required');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
     try {
-      const res = await fetch('/api/verify-otp', {
+      const response = await fetch('/api/verify-otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token: otp }),
-      });
-  
-      const result = await res.json();
-  
-      if (!res.ok || !result.success || !result.session) {
-        alert(result.error || 'Verification failed. Please try again.');
-        return;
-      }
-  
-      const { supabase } = await import('@/lib/supabaseClient');
-  
-      // Check if profile already exists
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('username, alias_finalized')
-        .eq('id', result.session.user.id)
-        .single();
-
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('⚠️ Error fetching existing profile:', fetchError.message);
-      }
-
-      // Only create temporary profile if no profile exists or if it's not finalized
-      if (!existingProfile || !existingProfile.alias_finalized) {
-        const tempAlias = generateTempAlias(result.session.user.id);
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({ 
-            id: result.session.user.id, 
-            username: tempAlias,
-            alias_finalized: false 
-          }, { 
-            onConflict: 'id' 
-          });
-
-        if (profileError) {
-          console.error('⚠️ Failed to create profile:', profileError.message);
-        }
-      }
-
-      // Wait a moment for the session to be properly established
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      console.log('🔍 Verify OTP - Session established:', {
-        userId: result.session.user.id,
-        redirect: redirect
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, token }),
       });
 
-      // The session will be automatically handled by the SessionProvider
-      // Redirect based on profile status
-      if (existingProfile && existingProfile.alias_finalized && !existingProfile.username.startsWith('user_')) {
-        // User has a finalized username, redirect to feed
-        console.log('✅ Redirecting to feed:', redirect);
-        window.location.href = redirect;
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+        // Redirect to username setup after a short delay
+        setTimeout(() => {
+          const redirect = searchParams.get('redirect') || '/';
+          router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`);
+        }, 2000);
       } else {
-        // User needs to set username, redirect to username setup
-        console.log('✅ Redirecting to username setup');
-        window.location.href = `/create/username?redirect=${encodeURIComponent(redirect)}`;
+        setError(data.error || 'Verification failed');
       }
-  
-    } catch (err: any) {
-      alert(err.message || 'Something went wrong during verification');
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
-  
 
   const handleResend = async () => {
-    const res = await fetch('/api/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    if (res.ok) setResendTimer(30);
+    if (!email) {
+      setError('Email is required');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+        setError('');
+      } else {
+        setError(data.error || 'Failed to send OTP');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0f0c29] to-[#302b63] text-white flex flex-col justify-center items-center px-6">
-      <h1 className="text-4xl font-bold mb-2">
-        pop <span className="text-purple-400">feed</span>
-      </h1>
-      <p className="text-sm mb-8">join the after-party</p>
-
-      <div className="w-full max-w-sm bg-gray-800 rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-2">OTP Verification</h2>
-        <p className="text-sm text-gray-300 mb-4">
-          We’ve sent a verification code to <span>{email}</span>
-        </p>
-
-        <div className="flex justify-between mb-4">
-          {code.map((digit, index) => (
-            <input
-              key={index}
-              id={`otp-${index}`}
-              type="text"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleChange(e.target.value, index)}
-              className="w-12 h-12 text-center text-lg rounded-md bg-gray-700 border border-gray-500 focus:outline-none"
-            />
-          ))}
-        </div>
-
-        {resendTimer > 0 ? (
-          <p className="text-xs text-center text-gray-400 mb-4">
-            Resend code in {resendTimer}s
-          </p>
+    <div className="min-h-screen bg-[#0d0b1f] text-white flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-[#1e1b30] rounded-xl p-8">
+        <h1 className="text-2xl font-bold text-center mb-8">Verify Your Email</h1>
+        
+        {success ? (
+          <div className="text-center">
+            <div className="text-green-400 text-lg mb-4">✓ Verification successful!</div>
+            <div className="text-gray-400">Redirecting to username setup...</div>
+          </div>
         ) : (
-          <button onClick={handleResend} className="text-purple-400 text-xs mb-4">
-            Resend Code
-          </button>
-        )}
+          <>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-[#19162b] border border-zinc-700 text-white px-3 py-2 rounded-md"
+                  placeholder="Enter your email"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Verification Code
+                </label>
+                <input
+                  type="text"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  className="w-full bg-[#19162b] border border-zinc-700 text-white px-3 py-2 rounded-md"
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                />
+              </div>
+            </div>
 
-        <button
-          onClick={handleVerify}
-          disabled={code.join('').length !== 6}
-          className="w-full bg-purple-500 hover:bg-purple-600 text-white font-medium py-2 rounded-lg transition"
-        >
-          Verify
-        </button>
+            {error && (
+              <div className="text-red-400 text-sm mb-4 text-center">{error}</div>
+            )}
+
+            <div className="space-y-3">
+              <button
+                onClick={handleVerify}
+                disabled={loading || !email || !token}
+                className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white py-2 px-4 rounded-md transition-colors"
+              >
+                {loading ? 'Verifying...' : 'Verify Email'}
+              </button>
+              
+              <button
+                onClick={handleResend}
+                disabled={loading || !email}
+                className="w-full bg-gray-600 hover:bg-gray-500 disabled:opacity-50 text-white py-2 px-4 rounded-md transition-colors"
+              >
+                {loading ? 'Sending...' : 'Resend Code'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
