@@ -14,13 +14,40 @@ function UsernamePageContent() {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [checkingProfile, setCheckingProfile] = useState(true);
+  const [needsUsername, setNeedsUsername] = useState(false);
 
   useEffect(() => {
-    if (!user?.id) {
-      router.push('/create');
-      return;
-    }
-  }, [user, router]);
+    const checkProfileStatus = async () => {
+      if (!user?.id) {
+        router.push('/create');
+        return;
+      }
+
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username, alias_finalized')
+          .eq('id', user.id)
+          .single();
+
+        if (profile && profile.alias_finalized && !profile.username.startsWith('user_')) {
+          // User already has a proper username, redirect to intended destination
+          window.location.href = redirect;
+          return;
+        }
+
+        setNeedsUsername(true);
+      } catch (error) {
+        console.error('Error checking profile:', error);
+        setNeedsUsername(true);
+      } finally {
+        setCheckingProfile(false);
+      }
+    };
+
+    checkProfileStatus();
+  }, [user, router, supabase, redirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,11 +98,29 @@ function UsernamePageContent() {
     }
   };
 
+  if (checkingProfile) {
+    return (
+      <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-400 text-sm">Checking your profile...</p>
+      </div>
+    );
+  }
+
   if (!user?.id) {
     return (
       <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
         <p className="text-gray-400 text-sm">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!needsUsername) {
+    return (
+      <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-400 text-sm">Redirecting...</p>
       </div>
     );
   }

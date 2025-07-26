@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from '@/src/components/SessionProvider'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 function VerifyPageContent() {
   const searchParams = useSearchParams()
@@ -27,9 +28,10 @@ function VerifyPageContent() {
   useEffect(() => {
     if (verificationComplete && !sessionLoading && session) {
       const redirect = searchParams.get('redirect') || '/feed'
-      router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`)
+      // Force a page reload to ensure session is properly established
+      window.location.href = `/create/username?redirect=${encodeURIComponent(redirect)}`
     }
-  }, [verificationComplete, sessionLoading, session, searchParams, router])
+  }, [verificationComplete, sessionLoading, session, searchParams])
 
   const handleVerify = async () => {
     if (!email || !token) {
@@ -54,7 +56,16 @@ function VerifyPageContent() {
       if (response.ok) {
         setSuccess(true)
         setVerificationComplete(true)
-        // Don't redirect immediately - wait for session to be established
+        
+        // Force session refresh
+        const supabase = createClientComponentClient()
+        await supabase.auth.refreshSession()
+        
+        // Wait a bit more for session to be established
+        setTimeout(() => {
+          const redirect = searchParams.get('redirect') || '/feed'
+          window.location.href = `/create/username?redirect=${encodeURIComponent(redirect)}`
+        }, 2000)
       } else {
         setError(data.error || 'Verification failed')
       }
@@ -107,7 +118,7 @@ function VerifyPageContent() {
           <div className="text-center">
             <div className="text-green-400 text-lg mb-4">✓ Verification successful!</div>
             <div className="text-gray-400">
-              {sessionLoading ? 'Setting up your session...' : 'Redirecting to username setup...'}
+              Setting up your account...
             </div>
           </div>
         ) : (
