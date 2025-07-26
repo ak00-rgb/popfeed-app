@@ -1,13 +1,12 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useSession } from '@/src/components/SessionProvider'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 function VerifyPageContent() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const { session, loading: sessionLoading } = useSession()
   const [email, setEmail] = useState('')
   const [token, setToken] = useState('')
