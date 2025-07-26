@@ -161,7 +161,8 @@ function FeedPageContent() {
       fetchedIds.current.add(id as string);
       fetchPosts();
     }
-  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps - fetchPosts is stable and we use refs to prevent infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   const toggleLike = async (postId: string) => {
     // Check if user is authenticated
