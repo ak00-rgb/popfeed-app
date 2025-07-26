@@ -37,10 +37,10 @@ function FeedPageContent() {
   const { id } = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClientComponentClient()
   const { session, user, loading, signOut } = useSession()
   const hasInitialized = useRef<string | null>(null)
   const hasLoadedUsername = useRef(false)
+  const fetchedIds = useRef<Set<string>>(new Set())
 
   const [posts, setPosts] = useState<Post[]>([])
   const [showComposer, setShowComposer] = useState(false)
@@ -155,14 +155,14 @@ function FeedPageContent() {
   }, [id])
 
   useEffect(() => {
-    console.log('FeedPage: fetchPosts useEffect triggered', { id, hasInitialized: hasInitialized.current })
+    console.log('FeedPage: fetchPosts useEffect triggered', { id, hasInitialized: hasInitialized.current, fetchedIds: Array.from(fetchedIds.current) })
     
-    // Only fetch on initial load or when id changes
-    if (!hasInitialized.current || hasInitialized.current !== id) {
-      hasInitialized.current = id as string;
+    // Only fetch if we haven't fetched this ID before
+    if (id && !fetchedIds.current.has(id as string)) {
+      fetchedIds.current.add(id as string);
       fetchPosts();
     }
-  }, [id]) // Remove fetchPosts from dependencies to prevent infinite loop
+  }, [id]) // Only depend on id, not fetchPosts to prevent infinite loop
 
   const toggleLike = async (postId: string) => {
     // Check if user is authenticated
