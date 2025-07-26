@@ -27,8 +27,7 @@ interface PostWithExtras {
 }
 
 export async function GET(req: Request) {
-  const cookieStore = await cookies(); // FIX: Await cookies()
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = createRouteHandlerClient({ cookies });
   const { searchParams } = new URL(req.url);
   const eventCode = searchParams.get('feedId');
 
