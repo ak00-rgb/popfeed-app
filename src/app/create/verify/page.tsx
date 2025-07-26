@@ -65,12 +65,7 @@ function VerifyPageContent() {
         const supabase = createClientComponentClient()
         await supabase.auth.refreshSession()
         
-        // Wait a bit more for session to be established
-        setTimeout(() => {
-          const redirect = searchParams.get('redirect') || '/feed'
-          console.log('Verify page - final redirect after timeout:', redirect)
-          window.location.href = `/create/username?redirect=${encodeURIComponent(redirect)}`
-        }, 2000)
+        // Don't redirect here - let the useEffect handle it when session is established
       } else {
         setError(data.error || 'Verification failed')
       }
