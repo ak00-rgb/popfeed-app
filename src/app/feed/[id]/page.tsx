@@ -53,6 +53,9 @@ function FeedPageContent() {
 
   const loadUsername = useCallback(async (userId: string) => {
     try {
+      const { createClientComponentClient } = await import('@supabase/auth-helpers-nextjs');
+      const supabase = createClientComponentClient();
+      
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('username, alias_finalized')
@@ -76,7 +79,7 @@ function FeedPageContent() {
     } catch (error) {
       console.error('Error in loadUsername:', error)
     }
-  }, [supabase])
+  }, []) // Remove supabase dependency
 
   // Load username when user is available
   useEffect(() => {
@@ -98,8 +101,9 @@ function FeedPageContent() {
       postParam: searchParams.get('post'), 
       session: !!session, 
       username, 
-      id 
+      id
     })
+    
     if (searchParams.get('post') === 'true') {
       // Only show composer if user is properly authenticated and has a username
       if (session && username && !username.startsWith('user_')) {
