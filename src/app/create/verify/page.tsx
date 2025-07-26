@@ -2,15 +2,18 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useSession } from '@/src/components/SessionProvider'
 
 function VerifyPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { session, loading: sessionLoading } = useSession()
   const [email, setEmail] = useState('')
   const [token, setToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [verificationComplete, setVerificationComplete] = useState(false)
 
   useEffect(() => {
     const emailParam = searchParams.get('email')
@@ -19,6 +22,14 @@ function VerifyPageContent() {
     if (emailParam) setEmail(emailParam)
     if (tokenParam) setToken(tokenParam)
   }, [searchParams])
+
+  // Wait for session to be established after verification
+  useEffect(() => {
+    if (verificationComplete && !sessionLoading && session) {
+      const redirect = searchParams.get('redirect') || '/feed'
+      router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`)
+    }
+  }, [verificationComplete, sessionLoading, session, searchParams, router])
 
   const handleVerify = async () => {
     if (!email || !token) {
@@ -42,11 +53,8 @@ function VerifyPageContent() {
 
       if (response.ok) {
         setSuccess(true)
-        // Redirect to username setup after a short delay to allow session to be established
-        setTimeout(() => {
-          const redirect = searchParams.get('redirect') || '/feed'
-          router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`)
-        }, 1500)
+        setVerificationComplete(true)
+        // Don't redirect immediately - wait for session to be established
       } else {
         setError(data.error || 'Verification failed')
       }
@@ -98,7 +106,9 @@ function VerifyPageContent() {
         {success ? (
           <div className="text-center">
             <div className="text-green-400 text-lg mb-4">✓ Verification successful!</div>
-            <div className="text-gray-400">Redirecting to username setup...</div>
+            <div className="text-gray-400">
+              {sessionLoading ? 'Setting up your session...' : 'Redirecting to username setup...'}
+            </div>
           </div>
         ) : (
           <>

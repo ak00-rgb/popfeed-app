@@ -12,10 +12,12 @@ function CreatePageContent() {
 
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
+  const [checkingProfile, setCheckingProfile] = useState(false)
 
   // If user is already authenticated, redirect them appropriately
   useEffect(() => {
     if (!sessionLoading && session) {
+      setCheckingProfile(true);
       // For authenticated users, check their profile status
       const checkProfileAndRedirect = async () => {
         try {
@@ -50,6 +52,8 @@ function CreatePageContent() {
           console.error('Error checking profile:', error);
           // Fallback to username setup
           router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`);
+        } finally {
+          setCheckingProfile(false);
         }
       };
 
@@ -82,18 +86,20 @@ function CreatePageContent() {
     }
   }
 
-  // Show loading state while checking session
-  if (sessionLoading) {
+  // Show loading state while checking session or profile
+  if (sessionLoading || checkingProfile) {
     return (
       <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
-        <p className="text-gray-400 text-sm">Loading...</p>
+        <p className="text-gray-400 text-sm">
+          {sessionLoading ? 'Loading...' : 'Checking your profile...'}
+        </p>
       </div>
     );
   }
 
-  // If user is authenticated, show loading while redirecting
-  if (session) {
+  // If user is authenticated and profile check is complete, show loading while redirecting
+  if (session && !checkingProfile) {
     return (
       <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
