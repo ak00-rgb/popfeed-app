@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from '@/src/components/SessionProvider'
 
-export default function CreatePage() {
+function CreatePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/feed'
@@ -99,23 +99,38 @@ export default function CreatePage() {
 
       <div className="w-full max-w-xs">
         <input
-          className="w-full p-3 mb-4 rounded bg-gray-800 text-white placeholder-gray-400"
-          placeholder="Enter your email"
+          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          type="email"
+          placeholder="Enter your email"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors"
+          onKeyPress={(e) => e.key === 'Enter' && sendOtp()}
         />
-
         <button
           onClick={sendOtp}
-          disabled={loading}
-          className={`mt-2 w-full rounded-md px-4 py-2 font-medium transition ${
-            loading ? 'bg-purple-900 cursor-not-allowed opacity-50' : 'bg-purple-600 hover:bg-purple-700'
-          }`}
+          disabled={loading || !email}
+          className="w-full mt-4 px-4 py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors"
         >
           {loading ? 'Sending...' : 'Continue'}
         </button>
       </div>
+
+      <p className="text-xs text-gray-500 mt-6 text-center">
+        By continuing, you agree to our Terms of Service and Privacy Policy
+      </p>
     </main>
+  )
+}
+
+export default function CreatePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-400 text-sm">Loading...</p>
+      </div>
+    }>
+      <CreatePageContent />
+    </Suspense>
   )
 }

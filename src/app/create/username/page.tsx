@@ -1,208 +1,142 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useSession } from '@/src/components/SessionProvider';
 
-const supabase = createClientComponentClient();
-
-export default function UsernamePage() {
-  const [username, setUsername] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [userReady, setUserReady] = useState(false);
-  const [sessionFailed, setSessionFailed] = useState(false);
-
+function UsernamePageContent() {
   const router = useRouter();
   const redirect = useSearchParams().get('redirect') || '/feed';
-  const { user, loading: sessionLoading, signOut } = useSession();
+  const supabase = createClientComponentClient();
+  const { user } = useSession();
+
+  const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        if (!sessionLoading) {
-          setSessionFailed(true);
-        }
-        return;
-      }
+    if (!user?.id) {
+      router.push('/create');
+      return;
+    }
+  }, [user, router]);
 
-      try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('username, alias_finalized')
-          .eq('id', user.id)
-          .single();
-
-        console.log('Fetched profile:', profile, 'Error:', error, 'User:', user?.id);
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('❌ Error fetching profile:', error.message);
-          setSessionFailed(true);
-          return;
-        }
-
-        // If profile exists and username is finalized, redirect
-        if (profile?.username && profile?.alias_finalized && !profile.username.startsWith('user_')) {
-          router.push(redirect);
-          return;
-        }
-
-        // If profile exists but username is temporary, clear it for new input
-        if (profile?.username && profile.username.startsWith('user_')) {
-          setUsername(''); // Clear any temporary username
-        }
-
-        setUserReady(true);
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        setSessionFailed(true);
-      }
-    };
-
-    console.log('Session user:', user);
-    fetchProfile();
-  }, [user, sessionLoading, router, redirect]);
-
-  const isValidUsername = (name: string) => /^[a-zA-Z0-9_]{3,20}$/.test(name);
-
-  const saveUsername = async () => {
-    if (!user?.id || !username.trim()) {
-      alert('Please enter a valid username.');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!username.trim() || username.length < 3) {
+      setError('Username must be at least 3 characters long');
       return;
     }
 
-    if (!isValidUsername(username)) {
-      alert('Username must be 3–20 characters long, alphanumeric or underscore only.');
+    if (!user?.id) {
+      setError('User not found');
       return;
     }
 
     setLoading(true);
+    setError('');
 
-    // Check if username is already taken by another user
-    const { data: existingUser, error: checkError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', username.trim())
-      .neq('id', user.id) // Exclude current user
-      .single();
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          username: username.trim().toLowerCase(),
+          alias_finalized: true
+        }, {
+          onConflict: 'id'
+        });
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('❌ Error checking username:', checkError.message);
-    }
-
-    if (existingUser) {
-      setLoading(false);
-      alert('⚠️ Username is already taken. Please choose a different one.');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({ 
-        id: user.id, 
-        username: username.trim(),
-        alias_finalized: true 
-      }, { 
-        onConflict: 'id' 
-      });
-
-    // Add delay and refetch profile before redirect
-    await new Promise(res => setTimeout(res, 1000));
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('username, alias_finalized')
-      .eq('id', user.id)
-      .single();
-    console.log('After upsert, refetched profile:', profile);
-
-    setLoading(false);
-
-    if (!error && profile?.username && profile?.alias_finalized) {
-      // Use full page reload to clear any stale session/profile cache
-      window.location.href = redirect;
-    } else if (!error) {
-      // If profile not ready, show error or retry
-      alert('Profile not ready yet. Please try again.');
-    } else {
-      console.error('❌ Failed to save username:', error.message);
-      // Check if it's a unique constraint violation
-      if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
-        alert('⚠️ Username is already taken. Please choose a different one.');
-      } else {
-        alert('⚠️ Failed to save username. Try again.');
+      if (error) {
+        if (error.code === '23505') {
+          setError('Username already taken');
+        } else {
+          setError('Failed to save username');
+        }
+        return;
       }
+
+      // Add a small delay to ensure the database update is processed
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Redirect after successful username setup
+      router.push(redirect);
+    } catch (err) {
+      setError('An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // UI while loading session
-  if (!userReady && !sessionFailed) {
+  if (!user?.id) {
     return (
       <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
-        <p className="text-gray-400 text-sm">Loading session...</p>
+        <p className="text-gray-400 text-sm">Loading...</p>
       </div>
     );
   }
 
-  // UI if session failed
-  if (sessionFailed) {
-    return (
-      <div className="min-h-screen bg-black text-white flex justify-center items-center px-4 text-center">
-        <div>
-          <p className="text-red-400 text-sm mb-4">
-            Couldn’t load your session. Try verifying again.
-          </p>
-          <button
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded"
-            onClick={() => router.replace('/create')}
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Main UI
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-center items-center px-6">
-      <div className="absolute top-6 right-6">
-        <button
-          onClick={signOut}
-          className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          Sign out
-        </button>
-      </div>
-      <h1 className="text-3xl font-bold mb-4">
-        Welcome to <span className="text-purple-400">Popfeed</span>
-      </h1>
-      <p className="text-sm text-gray-400 mb-6">Pick a username to start posting</p>
-
-      <div className="w-full max-w-xs">
-        <input
-          className="w-full p-3 mb-4 rounded bg-gray-800 text-white placeholder-gray-400"
-          placeholder="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-
-        <button
-          onClick={saveUsername}
-          disabled={!username.trim() || loading}
-          className={`mt-2 w-full rounded-md px-4 py-2 font-medium transition ${
-            !username.trim() || loading
-              ? 'bg-purple-900 cursor-not-allowed opacity-50'
-              : 'bg-purple-600 hover:bg-purple-700'
-          }`}
-        >
-          {loading ? 'Saving...' : 'Continue'}
-        </button>
-
-        <p className="text-xs mt-2 text-gray-500">
-          Use 3–20 characters. Only letters, numbers, and underscores allowed.
-        </p>
+    <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center px-6">
+      <button onClick={() => router.push('/')} className="self-start text-sm text-purple-300 mb-6">← Back to Home</button>
+      
+      <div className="w-full max-w-md">
+        <h1 className="text-3xl font-bold text-center mb-2">
+          <span className="text-white">pop</span><span className="text-purple-400">feed</span>
+        </h1>
+        <h2 className="text-xl font-semibold text-center mb-8">Choose your username</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors"
+              placeholder="Enter your username"
+              minLength={3}
+              maxLength={20}
+              pattern="[a-zA-Z0-9_]+"
+              title="Username can only contain letters, numbers, and underscores"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Letters, numbers, and underscores only. 3-20 characters.
+            </p>
+          </div>
+          
+          {error && (
+            <div className="text-red-400 text-sm text-center">{error}</div>
+          )}
+          
+          <button
+            type="submit"
+            disabled={loading || !username.trim()}
+            className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors"
+          >
+            {loading ? 'Saving...' : 'Continue'}
+          </button>
+        </form>
       </div>
     </div>
+  );
+}
+
+export default function UsernamePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0d0b1f] text-white flex flex-col justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-400 text-sm">Loading...</p>
+      </div>
+    }>
+      <UsernamePageContent />
+    </Suspense>
   );
 }

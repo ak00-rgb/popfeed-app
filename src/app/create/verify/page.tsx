@@ -1,33 +1,33 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 
-export default function VerifyPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+function VerifyPageContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [token, setToken] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
 
   useEffect(() => {
-    const emailParam = searchParams.get('email');
-    const tokenParam = searchParams.get('token');
+    const emailParam = searchParams.get('email')
+    const tokenParam = searchParams.get('token')
     
-    if (emailParam) setEmail(emailParam);
-    if (tokenParam) setToken(tokenParam);
-  }, [searchParams]);
+    if (emailParam) setEmail(emailParam)
+    if (tokenParam) setToken(tokenParam)
+  }, [searchParams])
 
   const handleVerify = async () => {
     if (!email || !token) {
-      setError('Email and token are required');
-      return;
+      setError('Email and token are required')
+      return
     }
 
-    setLoading(true);
-    setError('');
+    setLoading(true)
+    setError('')
 
     try {
       const response = await fetch('/api/verify-otp', {
@@ -36,35 +36,35 @@ export default function VerifyPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, token }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (response.ok) {
-        setSuccess(true);
+        setSuccess(true)
         // Redirect to username setup after a short delay
         setTimeout(() => {
-          const redirect = searchParams.get('redirect') || '/';
-          router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`);
-        }, 2000);
+          const redirect = searchParams.get('redirect') || '/'
+          router.push(`/create/username?redirect=${encodeURIComponent(redirect)}`)
+        }, 2000)
       } else {
-        setError(data.error || 'Verification failed');
+        setError(data.error || 'Verification failed')
       }
     } catch {
-      setError('Network error. Please try again.');
+      setError('Network error. Please try again.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleResend = async () => {
     if (!email) {
-      setError('Email is required');
-      return;
+      setError('Email is required')
+      return
     }
 
-    setLoading(true);
-    setError('');
+    setLoading(true)
+    setError('')
 
     try {
       const response = await fetch('/api/send-otp', {
@@ -73,22 +73,22 @@ export default function VerifyPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (response.ok) {
-        setSuccess(true);
-        setError('');
+        setSuccess(true)
+        setError('')
       } else {
-        setError(data.error || 'Failed to send OTP');
+        setError(data.error || 'Failed to send OTP')
       }
     } catch {
-      setError('Network error. Please try again.');
+      setError('Network error. Please try again.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-[#0d0b1f] text-white flex items-center justify-center px-4">
@@ -156,5 +156,18 @@ export default function VerifyPage() {
         )}
       </div>
     </div>
-  );
+  )
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0d0b1f] text-white flex items-center justify-center px-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-400 text-sm">Loading...</p>
+      </div>
+    }>
+      <VerifyPageContent />
+    </Suspense>
+  )
 }

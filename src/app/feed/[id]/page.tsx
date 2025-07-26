@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { FaHeart, FaRegHeart, FaComment, FaShare } from 'react-icons/fa'
 import { IoMdCreate } from 'react-icons/io'
@@ -33,7 +33,7 @@ interface Post {
   showAllComments?: boolean; // <-- add this
 }
 
-export default function FeedPage() {
+function FeedPageContent() {
   const { id } = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -558,4 +558,12 @@ export default function FeedPage() {
         ))}
     </div>
   )
+}
+
+export default function FeedPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <FeedPageContent />
+    </Suspense>
+  );
 }
