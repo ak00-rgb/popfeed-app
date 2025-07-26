@@ -38,6 +38,7 @@ function FeedPageContent() {
   const searchParams = useSearchParams()
   const { session, user, loading, signOut } = useSession()
   const hasLoadedUsername = useRef(false)
+  const hasHandledPostComposer = useRef(false)
 
   const [posts, setPosts] = useState<Post[]>([])
   const [showComposer, setShowComposer] = useState(false)
@@ -99,10 +100,15 @@ function FeedPageContent() {
       postParam: searchParams.get('post'), 
       session: !!session, 
       username, 
-      id
+      id,
+      profileLoading,
+      hasHandledPostComposer: hasHandledPostComposer.current
     })
     
-    if (searchParams.get('post') === 'true') {
+    // Only handle post composer logic once and after profile is loaded
+    if (searchParams.get('post') === 'true' && !hasHandledPostComposer.current && !profileLoading) {
+      hasHandledPostComposer.current = true;
+      
       // Only show composer if user is properly authenticated and has a username
       if (session && username && !username.startsWith('user_')) {
         setShowComposer(true)
@@ -114,7 +120,7 @@ function FeedPageContent() {
         router.push(`/create?redirect=/feed/${id}?post=true`)
       }
     }
-  }, [searchParams, session, username, router, id])
+  }, [searchParams, session, username, router, id, profileLoading])
 
   const fetchPosts = useCallback(async () => {
     console.log('FeedPage: fetchPosts called', { id, postsFetched })
