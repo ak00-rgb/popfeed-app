@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, Suspense, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { FaHeart, FaRegHeart, FaComment, FaShare } from 'react-icons/fa'
 import { IoMdCreate } from 'react-icons/io'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import dynamic from 'next/dynamic'
 import { useSession } from '@/src/components/SessionProvider'
 
@@ -162,7 +161,7 @@ function FeedPageContent() {
       fetchedIds.current.add(id as string);
       fetchPosts();
     }
-  }, [id]) // Only depend on id, not fetchPosts to prevent infinite loop
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps - fetchPosts is stable and we use refs to prevent infinite loops
 
   const toggleLike = async (postId: string) => {
     // Check if user is authenticated
